@@ -15,7 +15,34 @@ var bcrypt = require("bcryptjs");
 const RefreshToken = db.RefreshTokens;
 // const emailVlidator = require("../Validator/emailValidator");
 // const userController = require("../controllers/user.controller");
+exports.signup = (req, res) => {
+  // Validate request
 
+  //Save User to Database
+  const user = {
+    username: req.body.username,
+    first_name: req.body.first_name,
+    last_name: req.body.last_name,
+    email: req.body.email,
+    password: bcrypt.hashSync(req.body.password, 8),
+    //password  : req.body.password,
+    user_type: req.body.user_type ? "professor" : "student",
+    //user_type : req.body.user_type,
+    confirmed: false,
+    birth: req.body.birth,
+    tel: req.body.tel,
+    photo: req.body.photo,
+  };
+  User.create(user)
+    .then((user) => {
+      user.setRoles([1]).then(() => {
+        res.send({ message: "User was registered successfully!" });
+      });
+    })
+    .catch((err) => {
+      res.status(500).send({ message: err.message });
+    });
+};
 exports.signin = (req, res) => {
   console.log(req.body);
   User.scope({ exclude: ["password"] })
