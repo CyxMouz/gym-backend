@@ -1,5 +1,12 @@
 const express = require("express");
 const app = express();
+
+const server = require("http").createServer(app);
+const io = require("socket.io")(server, {
+  cors: {
+    origins: ["http://localhost:8081"],
+  },
+});
 global.port = 8080;
 
 const bodyParser = require("body-parser");
@@ -7,6 +14,7 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const db = require("./app/models");
 var path = require("path");
+const socketController = require("./app/controllers/socket.controller");
 
 var corsOptions = {
   origin: "http://localhost:8081",
@@ -48,7 +56,7 @@ require("./app/routes/exercise_program.routes")(app);
 require("./app/routes/muscle.routes")(app);
 require("./app/routes/muscle_exercise.routes")(app);
 require("./app/routes/user_program.routes")(app);
-
+require("./app/controllers/socket.controller")(server);
 //db.sequelize.sync({ alter: true });
 //db.sequelize.sync();
 //drop the table if it already exists
@@ -255,7 +263,18 @@ init_muscle_exercise = async () => {
     data_exoa.addMuscle(data_musclea, { through: "muscle_exercise" });
   }
 };
+//connected_user = 0;
+// io.on("connection", (socket) => {
+//   connected_user++;
+//   console.log("a user connected", connected_user),
+//     socket.on("disconnect", () => {
+//       console.log("user disconnected", connected_user);
+//       connected_user--;
+//     });
+// });
 
-app.listen(port, () => {
+io.on("connection", socketController);
+
+server.listen(port, () => {
   console.log(`server running on port : ${port}`);
 });
