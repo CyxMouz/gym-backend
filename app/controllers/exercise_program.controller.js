@@ -20,9 +20,120 @@ exports.create = async (req, res) => {
       through: {
         series: ExerciseList[index].default_series,
         repitions: ExerciseList[index].default_repitions,
+        day: ExerciseList[index].day,
       },
     });
   }
+  res.send({ message: "program exercise added" });
+};
+
+exports.update = async (req, res) => {
+  let userListProgram = req.body;
+
+  console.log(userListProgram);
+
+  let storedProgram = await Exercise_program.findAll({
+    where: { programId: req.params.id },
+  });
+  const program = await Program.findOne({
+    where: {
+      id: req.params.id,
+    },
+    include: Exercise,
+  });
+  let exerciseIdList = [];
+  for (let i = 0; i < userListProgram.length; i++) {
+    exerciseIdList.push(userListProgram[i].id);
+    let exo = await Exercise_program.findOne({
+      where: { programId: req.params.id, exerciseId: userListProgram[i].id },
+    });
+    if (!exo) {
+      let exercise = await Exercise.findOne({
+        where: { id: userListProgram[i].id },
+        include: Muscle,
+      });
+
+      program.addExercise(exercise, {
+        through: {
+          series: userListProgram[i].series,
+          repitions: userListProgram[i].repitions,
+          day: userListProgram[i].day,
+        },
+      });
+    } else {
+      await Exercise_program.update(
+        {
+          series: userListProgram[i].series,
+          repitions: userListProgram[i].repitions,
+          day: userListProgram[i].day,
+        },
+        {
+          where: {
+            programId: req.params.id,
+            exerciseId: userListProgram[i].id,
+          },
+        }
+      );
+    }
+  }
+
+  for (let k = 0; k < storedProgram.length; k++) {
+    exist = false;
+    for (let j = 0; j < userListProgram.length; j++) {
+      if (storedProgram[k].exerciseId == userListProgram[j].id) {
+        exist = true;
+        j = storedProgram.length;
+      }
+    }
+    if (!exist) {
+      let exo = await Exercise.findOne({
+        where: { id: storedProgram[k].exerciseId },
+      });
+      program.removeExercise(exo);
+    }
+  }
+
+  // for (let i = 0; i < userListProgram.length; i++) {
+  //   let found = false;
+  //   for (let j = 0; j < storedProgram.length; j++) {
+  //     if (storedProgram[j].id == userListProgram[i].id) {
+  //       found = true;
+  //       storedProgram[j] = userListProgram[i];
+  //       j = userListProgram.length;
+  //     }
+  //   }
+  //   if (!found) {
+  //     let exercise = await Exercise.findOne({
+  //       where: { id: userListProgram[i].id },
+  //       include: Muscle,
+  //     });
+  //     Program.addExercise(exercise, {
+  //       through: {
+  //         series: userListProgram[i].series,
+  //         repitions: userListProgram[i].repitions,
+  //         day: userListProgram[i].day,
+  //       },
+  //     });
+  //   }
+  // }
+
+  //console.log(storedProgram);
+  // Exercise_program.destroy({
+  //   where: {
+  //     programId: req.params.id,
+  //   },
+  // });
+  // for (let index = 0; index < ExerciseList.length; index++) {
+  //   program.addExercise(ExerciseList[index].id, {
+  //     through: {
+  //       series: ExerciseList[index].exercise_program.series,
+  //       repitions: ExerciseList[index].exercise_program.repitions,
+  //       day: ExerciseList[index].exercise_program.day,
+  //     },
+  //   });
+  // }
+
+  res.status(200).send(storedProgram);
 };
 
 function updateData(exo, data) {
@@ -49,11 +160,17 @@ exports.findOne = async (req, res) => {
 };
 
 exports.findAllByProgramId = async (req, res) => {
+  let fulldata = [];
   await Program.findAll({
     where: {
       id: req.params.id,
     },
-    include: Exercise,
+    include: [
+      {
+        model: Exercise,
+        include: [Muscle],
+      },
+    ],
   })
     .then((data) => {
       res.send(data);
@@ -64,6 +181,7 @@ exports.findAllByProgramId = async (req, res) => {
       });
     });
 };
+
 exports.findAllByExerciseId = async (req, res) => {
   await Exercise.findOne({
     where: {
@@ -94,29 +212,6 @@ exports.findAllWithExercise = async (req, res) => {
     });
 };
 
-exports.update = async (req, res) => {
-  const program = await Program.findOne({
-    where: {
-      id: req.params.id,
-    },
-  });
-  await Exercise_program.destroy({
-    where: {
-      programId: req.params.id,
-    },
-  });
-  let ExerciseList = req.body;
-
-  for (let index = 0; index < ExerciseList.length; index++) {
-    program.addExercise(ExerciseList[index].id, {
-      through: {
-        series: ExerciseList[index].default_series,
-        repitions: ExerciseList[index].default_repitions,
-      },
-    });
-  }
-  res.status(200).send({ message: "program updated" });
-};
 exports.delete = async (req, res) => {
   await Exercise_program.destroy({
     where: {

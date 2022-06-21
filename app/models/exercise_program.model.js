@@ -6,6 +6,9 @@ module.exports = (sequelize, Sequelize) => {
     repitions: {
       type: Sequelize.STRING,
     },
+    day: {
+      type: Sequelize.STRING,
+    },
   });
   return Exercise_program;
 };
